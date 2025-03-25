@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iOS Календарь</title>
+    <style>
+        :root {
+            --ios-blue: #007AFF;
+            --ios-red: #FF3B30;
+            --ios-gray: #F2F2F7;
+            --ios-dark-gray: #8E8E93;
+            --ios-text: #1C1C1E;
+            --ios-light-text: #636366;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--ios-gray);
+            color: var(--ios-text);
+            margin: 0;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .year {
+            font-size: 34px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .calendar-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .month {
+            background-color: white;
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .month-name {
+            text-align: center;
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 10px;
+            color: var(--ios-blue);
+        }
+        
+        .days-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-size: 12px;
+            color: var(--ios-light-text);
+            margin-bottom: 5px;
+        }
+        
+        .days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        
+        .day {
+            text-align: center;
+            padding: 5px 0;
+            font-size: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .day:hover {
+            background-color: var(--ios-gray);
+        }
+        
+        .day.empty {
+            visibility: hidden;
+        }
+        
+        .weekend {
+            color: var(--ios-red);
+        }
+        
+        .today {
+            background-color: var(--ios-blue);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .has-note {
+            position: relative;
+        }
+        
+        .has-note::after {
+            content: '';
+            position: absolute;
+            bottom: 1px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            background-color: var(--ios-blue);
+            border-radius: 50%;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        .modal-content {
+            background-color: white;
+            width: 80%;
+            max-width: 400px;
+            border-radius: 14px;
+            overflow: hidden;
+            animation: modalAppear 0.3s ease-out;
+        }
+        
+        @keyframes modalAppear {
+            from {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .modal-header {
+            padding: 16px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 18px;
+            border-bottom: 1px solid var(--ios-gray);
+        }
+        
+        .modal-body {
+            padding: 16px;
+        }
+        
+        .modal-footer {
+            display: flex;
+            border-top: 1px solid var(--ios-gray);
+        }
+        
+        .modal-button {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            font-weight: 600;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-size: 16px;
+        }
+        
+        .modal-button.cancel {
+            color: var(--ios-red);
+            border-right: 1px solid var(--ios-gray);
+        }
+        
+        .modal-button.save {
+            color: var(--ios-blue);
+        }
+        
+        textarea {
+            width: 100%;
+            height: 100px;
+            border: 1px solid var(--ios-gray);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: inherit;
+            font-size: 16px;
+            resize: none;
+        }
+        
+        .today-events {
+            background-color: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .today-events h3 {
+            margin-top: 0;
+            color: var(--ios-red);
+            font-size: 18px;
+        }
+        
+        .event {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--ios-gray);
+        }
+        
+        .event:last-child {
+            border-bottom: none;
+        }
+        
+        .event-date {
+            font-size: 14px;
+            color: var(--ios-light-text);
+            margin-bottom: 5px;
+        }
+        
+        .event-text {
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="year" id="current-year">2023</div>
+    </div>
+    
+    <div class="calendar-container" id="calendar-container">
+        <!-- Месяцы будут добавлены через JavaScript -->
+    </div>
+    
+    <div class="today-events" id="today-events">
+        <h3>Сегодня</h3>
+        <div id="events-list">
+            <!-- События будут добавлены через JavaScript -->
+        </div>
+    </div>
+    
+    <div class="modal" id="note-modal">
+        <div class="modal-content">
+            <div class="modal-header" id="modal-date">1 января</div>
+            <div class="modal-body">
+                <textarea id="note-text" placeholder="Добавьте заметку..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-button cancel" id="cancel-note">Отмена</button>
+                <button class="modal-button save" id="save-note">Сохранить</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Текущая дата
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            const currentMonth = today.getMonth();
+            const currentDate = today.getDate();
+            
+            // Установка текущего года
+            document.getElementById('current-year').textContent = currentYear;
+            
+            // Хранилище заметок
+            let notes = JSON.parse(localStorage.getItem('calendar-notes')) || {};
+            
+            // Генерация календаря на год
+            const calendarContainer = document.getElementById('calendar-container');
+            
+            for (let month = 0; month < 12; month++) {
+                const monthElement = document.createElement('div');
+                monthElement.className = 'month';
+                
+                const monthName = document.createElement('div');
+                monthName.className = 'month-name';
+                monthName.textContent = getMonthName(month);
+                monthElement.appendChild(monthName);
+                
+                const daysHeader = document.createElement('div');
+                daysHeader.className = 'days-header';
+                daysHeader.innerHTML = '<span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span class="weekend">Сб</span><span class="weekend">Вс</span>';
+                monthElement.appendChild(daysHeader);
+                
+                const daysElement = document.createElement('div');
+                daysElement.className = 'days';
+                
+                const firstDay = new Date(currentYear, month, 1).getDay();
+                const daysInMonth = new Date(currentYear, month + 1, 0).getDate();
+                
+                // Корректировка для понедельника как первого дня недели
+                const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+                
+                // Пустые ячейки для начала месяца
+                for (let i = 0; i < startOffset; i++) {
+                    const emptyDay = document.createElement('div');
+                    emptyDay.className = 'day empty';
+                    daysElement.appendChild(emptyDay);
+                }
+                
+                // Дни месяца
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const dayElement = document.createElement('div');
+                    dayElement.className = 'day';
+                    dayElement.textContent = day;
+                    
+                    // Проверка на выходной (суббота или воскресенье)
+                    const dayOfWeek = new Date(currentYear, month, day).getDay();
+                    if (dayOfWeek === 0 || dayOfWeek === 6) {
+                        dayElement.classList.add('weekend');
+                    }
+                    
+                    // Проверка на сегодняшний день
+                    if (currentYear === today.getFullYear() && month === currentMonth && day === currentDate) {
+                        dayElement.classList.add('today');
+                    }
+                    
+                    // Проверка на наличие заметки
+                    const dateKey = `${currentYear}-${month}-${day}`;
+                    if (notes[dateKey]) {
+                        dayElement.classList.add('has-note');
+                    }
+                    
+                    // Обработчик клика для добавления/редактирования заметки
+                    dayElement.addEventListener('click', function() {
+                        openNoteModal(currentYear, month, day);
+                    });
+                    
+                    daysElement.appendChild(dayElement);
+                }
+                
+                monthElement.appendChild(daysElement);
+                calendarContainer.appendChild(monthElement);
+            }
+            
+            // Показ событий на сегодня
+            showTodayEvents();
+            
+            // Модальное окно для заметок
+            const noteModal = document.getElementById('note-modal');
+            const cancelNoteBtn = document.getElementById('cancel-note');
+            const saveNoteBtn = document.getElementById('save-note');
+            const noteText = document.getElementById('note-text');
+            let currentDateKey = '';
+            
+            function openNoteModal(year, month, day) {
+                currentDateKey = `${year}-${month}-${day}`;
+                const date = new Date(year, month, day);
+                document.getElementById('modal-date').textContent = `${day} ${getMonthName(month, true)}`;
+                noteText.value = notes[currentDateKey] || '';
+                noteModal.style.display = 'flex';
+            }
+            
+            function closeNoteModal() {
+                noteModal.style.display = 'none';
+            }
+            
+            cancelNoteBtn.addEventListener('click', closeNoteModal);
+            
+            saveNoteBtn.addEventListener('click', function() {
+                if (noteText.value.trim()) {
+                    notes[currentDateKey] = noteText.value.trim();
+                } else {
+                    delete notes[currentDateKey];
+                }
+                
+                localStorage.setItem('calendar-notes', JSON.stringify(notes));
+                closeNoteModal();
+                updateCalendar();
+                showTodayEvents();
+            });
+            
+            // Обновление календаря после изменения заметок
+            function updateCalendar() {
+                const dayElements = document.querySelectorAll('.day:not(.empty)');
+                
+                dayElements.forEach(dayElement => {
+                    dayElement.classList.remove('has-note');
+                    
+                    const day = parseInt(dayElement.textContent);
+                    const monthElement = dayElement.closest('.month');
+                    const monthName = monthElement.querySelector('.month-name').textContent;
+                    const month = getMonthIndex(monthName);
+                    
+                    const dateKey = `${currentYear}-${month}-${day}`;
+                    if (notes[dateKey]) {
+                        dayElement.classList.add('has-note');
+                    }
+                });
+            }
+            
+            // Показать события на сегодня
+            function showTodayEvents() {
+                const eventsList = document.getElementById('events-list');
+                eventsList.innerHTML = '';
+                
+                const todayKey = `${currentYear}-${currentMonth}-${currentDate}`;
+                const todayNote = notes[todayKey];
+                
+                if (todayNote) {
+                    const eventElement = document.createElement('div');
+                    eventElement.className = 'event';
+                    
+                    const dateElement = document.createElement('div');
+                    dateElement.className = 'event-date';
+                    dateElement.textContent = `${currentDate} ${getMonthName(currentMonth, true)} ${currentYear}`;
+                    
+                    const textElement = document.createElement('div');
+                    textElement.className = 'event-text';
+                    textElement.textContent = todayNote;
+                    
+                    eventElement.appendChild(dateElement);
+                    eventElement.appendChild(textElement);
+                    eventsList.appendChild(eventElement);
+                } else {
+                    eventsList.innerHTML = '<div class="event">Нет событий на сегодня</div>';
+                }
+            }
+            
+            // Вспомогательные функции
+            function getMonthName(monthIndex, genitive = false) {
+                const months = [
+                    ['Январь', 'Января'],
+                    ['Февраль', 'Февраля'],
+                    ['Март', 'Марта'],
+                    ['Апрель', 'Апреля'],
+                    ['Май', 'Мая'],
+                    ['Июнь', 'Июня'],
+                    ['Июль', 'Июля'],
+                    ['Август', 'Августа'],
+                    ['Сентябрь', 'Сентября'],
+                    ['Октябрь', 'Октября'],
+                    ['Ноябрь', 'Ноября'],
+                    ['Декабрь', 'Декабря']
+                ];
+                return months[monthIndex][genitive ? 1 : 0];
+            }
+            
+            function getMonthIndex(monthName) {
+                const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                               'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+                return months.indexOf(monthName);
+            }
+        });
+    </script>
+</body>
+</html>
